@@ -16,6 +16,7 @@ from origin.client.origin_subscriber import Subscriber
 import multiprocessing
 from multiprocessing import Queue, Process, Manager
 import traceback
+import ast
 
 '''
 TODO link storage_time and rep_rate to GUI
@@ -61,6 +62,7 @@ def hybrid_callback(stream_id, data, state, log, ctrl, plotter=None, master_dict
         #    print "Error: No Animator"
     #else:
         #for streams in descriptons:
+
         if stream_id == '0004':
             current_key = keys[0]
             description = descriptions['0004']
@@ -179,9 +181,6 @@ if __name__ == '__main__':
     fullBasePath = os.path.abspath(os.getcwd() + "/Origin-master")
     #fullBasePath = os.path.dirname(os.path.dirname(fullBinPath))
     fullCfgPath = os.path.join(fullBasePath, "config")
-    q1 = Queue()
-    q2 = Queue()
-    qlist =[q1,q2]
 
     if len(sys.argv) > 1:
         if sys.argv[1] == 'test':
@@ -203,14 +202,21 @@ if __name__ == '__main__':
     plot_config.read(plot_configfile)
     plot_dict = {}
     sections = plot_config.sections()
+    m = multiprocessing.Manager()
     for section in sections:
         plot_dict[section] = {}
         options = plot_config.options(section)
         for option in options:
-            plot_dict[section][option] = plot_config.get(section, option)
+            if option == 'data_labels':
+                plot_dict[section][option] = ast.literal_eval(plot_config.get(section, option))
+            elif option == 'num_of_columns':
+                plot_dict[section][option] = int(plot_config.get(section, option))
+                plot_dict[section]['data_array'] = np.ndarray.tolist(np.full((int(plot_config.get(section, 'points')), int(plot_config.get(section, option))), np.nan, dtype = float))
+            else:
+                plot_dict[section][option] = plot_config.get(section, option)
+        x = m.Queue()
+        plot_dict[section]['queue'] = x
 
-        m = multiprocessing.Manager()
-        plot_dict[section]['queue'] = m.Queue()
 
     # TODO : Make stream names compatible with GUI input
     streams = ['Hybrid_Temp', 'Hybrid_Beam_Balances']
