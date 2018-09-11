@@ -21,27 +21,14 @@ import ast
 '''
 TODO link storage_time and rep_rate to GUI
 '''
-storage_time = 10
-rep_rate = 1
-length = storage_time/rep_rate
 '''
 If adding an new stream, append "directory" with keyword
 and list of variables.
 '''
-directory = {"0004":["measurement_time","Chamber","Near_Terminal","Coils"],
-"0013":["measurement_time","X1","X2","Y1","Y2","Z1","Z2"]}
 '''
 The "descriptions" dictionary is used to fill out file names
 to which this code will write data. Append if adding new stream.
 '''
-descriptions = {"0004":"1","0013":"2"}
-keys = directory.keys()
-for key in keys:
-    with open("{}_{}.csv".format(key,descriptions[key]),"w+") as appendfile:
-        fileappend = csv.writer(appendfile)
-        fileappend.writerow(directory[key])
-        for row in range(length):
-            fileappend.writerow([1])
 
 def hybrid_callback(stream_id, data, state, log, ctrl, plotter=None, master_dict=None):
     """
@@ -58,60 +45,37 @@ def hybrid_callback(stream_id, data, state, log, ctrl, plotter=None, master_dict
         print 'No master dictionary.'
     try:
         log.info("Stream Id {} : Data : [{}]".format(stream_id,data))
-        #if animator == None:
-        #    print "Error: No Animator"
-    #else:
-        #for streams in descriptons:
 
-        if stream_id == '0004':
-            current_key = keys[0]
-            description = descriptions['0004']
-            current_data = np.zeros(len(directory["0004"]), dtype = float)
-            for i, column in enumerate(directory["0004"]):
-                current_data[i] = data[column]
-            master_dict['Hybrid_Temp']['queue'].put(current_data)
+        for key in master_dict.keys():
+            if stream_id == master_dict[key]['current_key']:
+                current_data = np.zeros(len(master_dict[key]['data_labels']), dtype = float)
+                for i, column in enumerate(master_dict[key]['data_labels']):
+                    current_data[i] = data[column]
 
-        elif stream_id == '0013':
-            current_key = keys[1]
-            description = descriptions['0013']
-            current_data = np.zeros(len(directory["0013"]), dtype = float)
-            for i, column in enumerate(directory["0013"]):
-                current_data[i] = data[column]
-            master_dict['Hybrid_Power']['queue'].put(current_data)
+                with open("{}_{}.csv".format(master_dict[key]['current_key'], master_dict[key]['description']), "r") as infile:
+                    filereader = csv.reader(infile)
+                    lines = infile.readlines()
 
-        else:
-            print 'Error: wrong stream_id'
-            return state
-
-        with open("{}_{}.csv".format(current_key,description), "r") as infile:
-            filereader = csv.reader(infile)
-            lines = infile.readlines()
-
-        with open("{}_{}.csv".format(current_key,description), "w") as outfile:
-            filewriter = csv.writer(outfile)
-            for pos, line in enumerate(lines):
-                if pos != 1:
-                    outfile.write(line)
-        with open("{}_{}.csv".format(current_key,description),"a") as appendfile:
-            fileappend = csv.writer(appendfile)
-            fileappend.writerow(current_data)
-            #print current_data
-
+                with open("{}_{}.csv".format(master_dict[key]['current_key'], master_dict[key]['description']), "w") as outfile:
+                    filewriter = csv.writer(outfile)
+                    for pos, line in enumerate(lines):
+                        if pos != 1:
+                            outfile.write(line)
+                with open("{}_{}.csv".format(master_dict[key]['current_key'], master_dict[key]['description']),"a") as appendfile:
+                    fileappend = csv.writer(appendfile)
+                    fileappend.writerow(current_data)
 
     except KeyError as Kerr:
         traceback.print_tb(sys.exc_info()[2])
         log.error("KeyError in Callback function")
-    del current_key
-
-    #from real_time_update.py import animationthingy
 
     return state
 
 class animationthingy():
 
-    def __init__(self, master_dict):
+    def __init__(self, dict):
 
-        points = 1000 # This is the maximum number of data points that you want to plot
+        self.master_dict = dict
         # If a new stream is to be plotted, add another global q (queue) variable
         '''In the case that you want to plot another data stream, update master_dict{} in the following way:
         1) Append name of new stream to "streams".
@@ -126,8 +90,7 @@ class animationthingy():
         6) If needed (some graphes share x axis), append "xlabels" with new x axis label.
         7) Append "ylabels" with new y axis label.
         '''
-        self.master_dict = master_dict
-        self.fig, self.axarr = plt.subplots(len(master_dict.keys()), sharex=True)
+        self.fig, self.axarr = plt.subplots(len(self.master_dict.keys()), sharex=True)
         self.ani = animation.FuncAnimation(self.fig,self.animate,interval=2000)
         plt.show()
 
@@ -141,30 +104,28 @@ class animationthingy():
         return targetlist
 
     def animate(self,i):
-        for key in self.master_dict.keys():
-            self.master_dict[key]['data_array'] = self.update_list(self.master_dict[key]['data_array'], self.master_dict[key]['queue'].get())
-        for key in self.master_dict.keys():
-            self.axarr[key].clear()
-
         self.colors = ['red','orange','green','cyan','blue','purple','magenta']
 
-        for index1 in range(len(self.master_dict.keys())):
-            for index2 in range(self.master_dict[index1]['num_of_columns']):
-                if index2 != 0:
-                    self.axarr[index1].scatter((self.master_dict[index1]['data_array'][:,0]/(2**32)-time.time())/60,
-                    self.master_dict[index1]['data_array'][:,index2],
-                    marker='o',
-                    color=self.colors[index2],
-                    label=self.master_dict[index1]['data_labels'][index2-1])
-                    self.axarr[index1].axhline(np.nanmean(self.master_dict[index1]['data_array'][:,index2]),
-                    color=self.colors[index2])
+        for index1, key in enumerate(self.master_dict.keys()):
+            with open("{}_{}.csv".format(self.master_dict[key]['current_key'], self.master_dict[key]['description']), "r") as infile:
+                self.filereader = csv.reader(infile)
+                self.lines = infile.readlines()
+            #for index2 in range(self.master_dict[key]['num_of_columns']):
 
-        self.axarr[i].set_xlabel(self.master_dict['xlabels'][0])
+    #            if index2 != 0:
+    #                self.axarr[index1].scatter((self.master_dict[index1]['data_array'][:,0]/(2**32)-time.time())/60,
+    #                self.master_dict[index1]['data_array'][:,index2],
+    #                color=self.colors[index2],
+    #                label=self.master_dict[index1]['data_labels'][index2-1])
+    #                self.axarr[index1].axhline(np.nanmean(self.master_dict[index1]['data_array'][:,index2]),
+    #                color=self.colors[index2])
 
-        for i in range(len(self.master_dict.keys())):
-            self.axarr[i].legend(loc='upper left', prop={'size':7})
-            self.axarr[i].set_ylabel(self.master_dict['ylabels'][i])
-            self.axarr[i].set_title(self.master_dict['titles'][i])
+    #    self.axarr[i].set_xlabel(self.master_dict['xlabels'][0])
+
+    #    for i in range(len(self.master_dict.keys())):
+    #        self.axarr[i].legend(loc='upper left', prop={'size':7})
+    #        self.axarr[i].set_ylabel(self.master_dict['ylabels'][i])
+    #        self.axarr[i].set_title(self.master_dict['titles'][i])
 
 if __name__ == '__main__':
 
@@ -211,12 +172,17 @@ if __name__ == '__main__':
                 plot_dict[section][option] = ast.literal_eval(plot_config.get(section, option))
             elif option == 'num_of_columns':
                 plot_dict[section][option] = int(plot_config.get(section, option))
-                plot_dict[section]['data_array'] = np.ndarray.tolist(np.full((int(plot_config.get(section, 'points')), int(plot_config.get(section, option))), np.nan, dtype = float))
+            elif option == 'points':
+                plot_dict[section][option] = ast.literal_eval(plot_config.get(section, option))
             else:
                 plot_dict[section][option] = plot_config.get(section, option)
-        x = m.Queue()
-        plot_dict[section]['queue'] = x
 
+    for key in plot_dict.keys():
+        with open("{}_{}.csv".format(plot_dict[key]['current_key'], plot_dict[key]['description']),"w+") as appendfile:
+            fileappend = csv.writer(appendfile)
+            fileappend.writerow(plot_dict[key]['data_labels'])
+            for row in range(plot_dict[key]['points']):
+                fileappend.writerow(np.full((1,len(plot_dict[key]['data_labels'])), np.nan, dtype=float))
 
     # TODO : Make stream names compatible with GUI input
     streams = ['Hybrid_Temp', 'Hybrid_Beam_Balances']
