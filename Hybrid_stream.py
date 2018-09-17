@@ -108,8 +108,7 @@ class animationthingy():
             self.axarr[index1].legend(loc='upper left', prop={'size':7})
             self.axarr[index1].set_ylabel(self.master_dict[key]['ylabel'])
             self.axarr[index1].set_title(self.master_dict[key]['title'])
-
-        self.axarr[1].set_xlabel(self.master_dict['StreamOne']['xlabel'])
+            self.axarr[index1].set_xlabel(self.master_dict[key]['xlabel'])
 
 if __name__ == '__main__':
 
