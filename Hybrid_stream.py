@@ -162,13 +162,13 @@ if __name__ == '__main__':
                 plot_dict[section][option] = plot_config.get(section, option)
 
     for key in plot_dict.keys():
-        with open("{}_{}.csv".format(plot_dict[key]['current_key'], plot_dict[key]['description']),"w+") as appendfile:
+        with open("{}_{}.csv".format(plot_dict[key]['current_key'], plot_dict[key]['description']),"wb") as appendfile:
             fileappend = csv.writer(appendfile)
             fileappend.writerow(plot_dict[key]['data_labels'])
             for row in range(plot_dict[key]['points']):
                 fileappend.writerow(np.full(len(plot_dict[key]['data_labels']), np.nan, dtype = float))
     # TODO : Make stream names compatible with GUI input
-    streams = ['Hybrid_Temp', 'Hybrid_Beam_Balances']
+    streams = plot_dict.keys()
 #    stream = raw_input("stream to subscribe to: ")
     processes = []
     data_plot = Process(target=animationthingy, args = (plot_dict,))
