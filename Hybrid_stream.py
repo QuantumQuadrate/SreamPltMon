@@ -78,20 +78,6 @@ class animationthingy():
     def __init__(self, dict):
 
         self.master_dict = dict
-        # If a new stream is to be plotted, add another global q (queue) variable
-        '''In the case that you want to plot another data stream, update master_dict{} in the following way:
-        1) Append name of new stream to "streams".
-        2) Append new blank array to the "data_arrays" list with np.full().
-        Be sure to make sure that the number of columns in this new blank
-        array matches the number of variables that are coming through its
-        respective queue.
-        3) Append new queue to "queues".
-        4) Append "num_of_columns" with an integer that represents the
-        number of variables that are coming through the respective queue.
-        5) Append "titles" with the new graph title.
-        6) If needed (some graphes share x axis), append "xlabels" with new x axis label.
-        7) Append "ylabels" with new y axis label.
-        '''
         self.fig, self.axarr = plt.subplots(len(self.master_dict.keys()), sharex=True)
         self.ani = animation.FuncAnimation(self.fig,self.animate,interval=100)
         plt.show()
