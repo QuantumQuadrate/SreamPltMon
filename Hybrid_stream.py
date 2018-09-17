@@ -17,6 +17,8 @@ import multiprocessing
 from multiprocessing import Queue, Process, Manager
 import traceback
 import ast
+import math
+from numpy import genfromtxt
 
 '''
 TODO link storage_time and rep_rate to GUI
@@ -91,7 +93,7 @@ class animationthingy():
         7) Append "ylabels" with new y axis label.
         '''
         self.fig, self.axarr = plt.subplots(len(self.master_dict.keys()), sharex=True)
-        self.ani = animation.FuncAnimation(self.fig,self.animate,interval=2000)
+        self.ani = animation.FuncAnimation(self.fig,self.animate,interval=100)
         plt.show()
 
     def shift(self, l, n):
@@ -107,25 +109,21 @@ class animationthingy():
         self.colors = ['red','orange','green','cyan','blue','purple','magenta']
 
         for index1, key in enumerate(self.master_dict.keys()):
-            with open("{}_{}.csv".format(self.master_dict[key]['current_key'], self.master_dict[key]['description']), "r") as infile:
-                self.filereader = csv.reader(infile)
-                self.lines = infile.readlines()
-            #for index2 in range(self.master_dict[key]['num_of_columns']):
+            self.axarr[index1].clear()
+            df = genfromtxt("{}_{}.csv".format(self.master_dict[key]['current_key'], self.master_dict[key]['description']), delimiter=',')
+            for index2 in range(self.master_dict[key]['num_of_columns']):
+                if index2 != 0:
+                    self.axarr[index1].scatter((df[:,0]/(2**32)-time.time())/60,
+                    df[:,index2],
+                    color=self.colors[index2],
+                    label=self.master_dict[key]['data_labels'][index2])
+                    self.axarr[index1].axhline(np.nanmean(df[:,index2]),
+                    color=self.colors[index2])
+            self.axarr[index1].legend(loc='upper left', prop={'size':7})
+            self.axarr[index1].set_ylabel(self.master_dict[key]['ylabel'])
+            self.axarr[index1].set_title(self.master_dict[key]['title'])
 
-    #            if index2 != 0:
-    #                self.axarr[index1].scatter((self.master_dict[index1]['data_array'][:,0]/(2**32)-time.time())/60,
-    #                self.master_dict[index1]['data_array'][:,index2],
-    #                color=self.colors[index2],
-    #                label=self.master_dict[index1]['data_labels'][index2-1])
-    #                self.axarr[index1].axhline(np.nanmean(self.master_dict[index1]['data_array'][:,index2]),
-    #                color=self.colors[index2])
-
-    #    self.axarr[i].set_xlabel(self.master_dict['xlabels'][0])
-
-    #    for i in range(len(self.master_dict.keys())):
-    #        self.axarr[i].legend(loc='upper left', prop={'size':7})
-    #        self.axarr[i].set_ylabel(self.master_dict['ylabels'][i])
-    #        self.axarr[i].set_title(self.master_dict['titles'][i])
+        self.axarr[1].set_xlabel(self.master_dict['StreamOne']['xlabel'])
 
 if __name__ == '__main__':
 
@@ -182,8 +180,7 @@ if __name__ == '__main__':
             fileappend = csv.writer(appendfile)
             fileappend.writerow(plot_dict[key]['data_labels'])
             for row in range(plot_dict[key]['points']):
-                fileappend.writerow(np.full((1,len(plot_dict[key]['data_labels'])), np.nan, dtype=float))
-
+                fileappend.writerow(np.full(len(plot_dict[key]['data_labels']), np.nan, dtype = float))
     # TODO : Make stream names compatible with GUI input
     streams = ['Hybrid_Temp', 'Hybrid_Beam_Balances']
 #    stream = raw_input("stream to subscribe to: ")
