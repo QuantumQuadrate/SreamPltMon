@@ -142,7 +142,7 @@ if __name__ == '__main__':
     print('')
     pprint.pprint(sub.known_streams.keys())
 
-    plot_configfile = os.path.join(os.getcwd(), "Hybrid_config.cfg")
+    plot_configfile = os.path.join(os.getcwd(), "config.cfg")
     plot_config = ConfigParser.ConfigParser()
     plot_config.read(plot_configfile)
     plot_dict = {}
