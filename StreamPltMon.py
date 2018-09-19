@@ -122,7 +122,7 @@ if __name__ == '__main__':
     logger.addHandler(ch)
 
     # first find ourselves
-    fullBasePath = os.path.abspath(os.getcwd() + "/Origin-master")
+    fullBasePath = os.path.abspath(os.getcwd() + "/Origin")
     #fullBasePath = os.path.dirname(os.path.dirname(fullBinPath))
     fullCfgPath = os.path.join(fullBasePath, "config")
 
